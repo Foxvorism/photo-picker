@@ -21,6 +21,11 @@ type SelectionRow = {
   photo_id: string;
 };
 
+const filenameSorter = new Intl.Collator("en", {
+  numeric: true,
+  sensitivity: "base",
+});
+
 export default defineEventHandler(async (event) => {
   const { projectId } = getProjectSession(event);
   const config = useRuntimeConfig(event);
@@ -44,8 +49,7 @@ export default defineEventHandler(async (event) => {
     .select("id,filename,preview_path,sort_order")
     .eq("project_id", projectId)
     .eq("is_visible", true)
-    .order("sort_order", { ascending: true })
-    .order("filename", { ascending: true })
+    .order("filename", { ascending: false })
     .returns<PhotoRow[]>();
 
   if (photosError) {
@@ -66,6 +70,23 @@ export default defineEventHandler(async (event) => {
       statusCode: 500,
       statusMessage: "Selections could not be loaded",
     });
+  }
+
+  photos.sort((firstPhoto, secondPhoto) =>
+    filenameSorter.compare(firstPhoto.filename, secondPhoto.filename),
+  );
+
+  if (photos.length === 0) {
+    return {
+      project: {
+        title: project.title,
+        clientName: project.client_name,
+        selectionLimit: project.selection_limit,
+        status: project.status,
+      },
+      photos: [],
+      selectedCount: selections.length,
+    };
   }
 
   const signedUrls = await supabase.storage
