@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import SubmitButton from "~/components/SubmitButton.vue";
+
 type GalleryPhoto = {
   id: string;
   filename: string;
@@ -18,7 +20,6 @@ type GalleryResponse = {
 };
 
 const toast = useToast();
-const colorMode = useColorMode();
 
 const {
   data: gallery,
@@ -41,9 +42,8 @@ const isSubmitted = computed(
   () => gallery.value?.project.status === "submitted",
 );
 
-const isDarkMode = computed(() => colorMode.value === "dark");
-
 const selectedPhotoIds = ref<Set<string>>(new Set());
+const showSelectedOnly = ref(false);
 
 watch(
   gallery,
@@ -59,6 +59,16 @@ watch(
 
 const selectedPhotoCount = computed(() => {
   return selectedPhotoIds.value.size;
+});
+
+const filteredPhotos = computed(() => {
+  const photos = gallery.value?.photos ?? [];
+
+  if (!showSelectedOnly.value) {
+    return photos;
+  }
+
+  return photos.filter((photo) => selectedPhotoIds.value.has(photo.id));
 });
 
 function isPhotoSelected(photoId: string) {
@@ -90,10 +100,10 @@ function togglePhotoSelection(photo: GalleryPhoto) {
   }
 
   selectedPhotoIds.value = nextSelectedPhotoIds;
-}
 
-function toggleColorMode() {
-  colorMode.preference = colorMode.value === "dark" ? "light" : "dark";
+  if (showSelectedOnly.value) {
+    nextTick(resizeAllMasonryItems);
+  }
 }
 
 function getMasonryAspectRatios(columnCount: number) {
@@ -176,6 +186,11 @@ function resizeAllMasonryItems() {
     });
 }
 
+watch(showSelectedOnly, async () => {
+  await nextTick();
+  resizeAllMasonryItems();
+});
+
 onMounted(() => {
   window.addEventListener("resize", resizeAllMasonryItems);
   requestAnimationFrame(resizeAllMasonryItems);
@@ -252,12 +267,20 @@ onBeforeUnmount(() => {
         variant="soft"
       />
 
+      <UAlert
+        v-else-if="showSelectedOnly && filteredPhotos.length === 0"
+        color="neutral"
+        description="Belum ada foto yang dipilih."
+        title="Filter kosong"
+        variant="soft"
+      />
+
       <div v-else class="flex w-full justify-center">
         <section
           class="w-[99%] grid grid-flow-row-dense auto-rows-1 grid-cols-2 gap-x-2.5 gap-y-1.5 sm:grid-cols-3 lg:grid-cols-4"
         >
           <article
-            v-for="photo in gallery?.photos"
+            v-for="photo in filteredPhotos"
             :key="photo.id"
             class="relative self-start"
             data-masonry-item
@@ -304,7 +327,7 @@ onBeforeUnmount(() => {
                 size="sm"
                 square
                 :variant="isPhotoSelected(photo.id) ? 'solid' : 'ghost'"
-                @click.stop="togglePhotoSelection(photo)" 
+                @click.stop="togglePhotoSelection(photo)"
               />
             </div>
           </article>
@@ -314,26 +337,22 @@ onBeforeUnmount(() => {
       <div
         class="w-full text-center text-xs text-[#083182]/50 dark:text-white/50"
       >
-        <p>Displaying all {{ gallery?.photos.length || 0 }} photos</p>
+        <p>
+          Displaying {{ filteredPhotos.length }} of
+          {{ gallery?.photos.length || 0 }} photos
+        </p>
       </div>
-
-      <ClientOnly>
-        <UButton
-          :aria-label="
-            isDarkMode ? 'Aktifkan light mode' : 'Aktifkan dark mode'
-          "
-          class="fixed bottom-5 right-5 z-40 rounded-full bg-[#083182] text-white shadow-xl shadow-[#083182]/25 transition hover:bg-[#062764] dark:bg-[#d0dbee] dark:text-[#083182] dark:hover:bg-[#eaf0fb]"
-          size="xl"
-          square
-          variant="solid"
-          @click="toggleColorMode"
-        >
-          <UIcon
-            :name="isDarkMode ? 'i-lucide-sun' : 'i-lucide-moon'"
-            class="size-5 text-current"
-          />
-        </UButton>
-      </ClientOnly>
     </div>
+
+    <FilterSelectedButton
+      v-model="showSelectedOnly"
+      :disabled="selectedPhotoCount === 0 && !showSelectedOnly"
+    />
+    <ColorModePicker />
+    <SubmitButton
+      v-if="selectedPhotoCount > 0"
+      :selectedCount="selectedPhotoCount"
+      :selectLimit="gallery?.project.selectionLimit || 0"
+    />
   </main>
 </template>
