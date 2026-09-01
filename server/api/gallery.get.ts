@@ -1,6 +1,7 @@
-import { createError, defineEventHandler, useRuntimeConfig } from "#imports";
+import { createError, defineEventHandler } from "#imports";
 import { getProjectSession } from "../utils/session";
 import { createSupabaseAdmin } from "../utils/supabase";
+import { rememberPhotoPreviewPath } from "../utils/photo-preview-cache";
 
 type ProjectRow = {
   id: string;
@@ -28,7 +29,6 @@ const filenameSorter = new Intl.Collator("en", {
 
 export default defineEventHandler(async (event) => {
   const { projectId } = getProjectSession(event);
-  const config = useRuntimeConfig(event);
   const supabase = createSupabaseAdmin(event);
 
   const { data: project, error: projectError } = await supabase
@@ -76,31 +76,11 @@ export default defineEventHandler(async (event) => {
     filenameSorter.compare(firstPhoto.filename, secondPhoto.filename),
   );
 
-  if (photos.length === 0) {
-    return {
-      project: {
-        title: project.title,
-        clientName: project.client_name,
-        selectionLimit: project.selection_limit,
-        status: project.status,
-      },
-      photos: [],
-      selectedCount: selections.length,
-    };
-  }
-
-  const signedUrls = await supabase.storage
-    .from(config.supabaseBucket)
-    .createSignedUrls(photos.map((photo) => photo.preview_path), 60 * 5);
-
-  if (signedUrls.error) {
-    throw createError({
-      statusCode: 500,
-      statusMessage: "Photo previews could not be loaded",
-    });
-  }
-
   const selectedPhotoIds = new Set(selections.map((selection) => selection.photo_id));
+
+  for (const photo of photos) {
+    rememberPhotoPreviewPath(projectId, photo.id, photo.preview_path);
+  }
 
   return {
     project: {
@@ -109,10 +89,10 @@ export default defineEventHandler(async (event) => {
       selectionLimit: project.selection_limit,
       status: project.status,
     },
-    photos: photos.map((photo, index) => ({
+    photos: photos.map((photo) => ({
       id: photo.id,
       filename: photo.filename,
-      previewUrl: signedUrls.data[index]?.signedUrl ?? "",
+      previewUrl: `/api/photo-previews/${encodeURIComponent(photo.id)}`,
       selected: selectedPhotoIds.has(photo.id),
     })),
     selectedCount: selectedPhotoIds.size,

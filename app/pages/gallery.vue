@@ -338,7 +338,7 @@ onBeforeUnmount(() => {
         class="w-full text-center text-xs text-[#083182]/50 dark:text-white/50"
       >
         <p>
-          Displaying {{ filteredPhotos.length }} of
+          Displaying all of
           {{ gallery?.photos.length || 0 }} photos
         </p>
       </div>
