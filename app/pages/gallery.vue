@@ -337,9 +337,12 @@ onBeforeUnmount(() => {
       <div
         class="w-full text-center text-xs text-[#083182]/50 dark:text-white/50"
       >
-        <p>
-          Displaying all of
-          {{ gallery?.photos.length || 0 }} photos
+        <p v-if="showSelectedOnly">
+          Displaying {{ selectedPhotoCount }} selected photo(s)
+        </p>
+        <p v-else>
+          Displaying all
+          {{ gallery?.photos.length || 0 }} photo(s)
         </p>
       </div>
     </div>
