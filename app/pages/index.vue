@@ -71,12 +71,13 @@ async function verifyAccessCode() {
             />
           </div>
 
-          <h1 class="mt-1 text-2xl font-bold text-[#083182] dark:text-white">
+          <!-- <h1 class="mt-1 text-2xl font-bold text-[#083182] dark:text-white">
             Pick A Pic
-          </h1>
+          </h1> -->
 
           <p class="mt-2 text-sm text-gray-500 dark:text-white/60">
-            Thank you for using our service. Please enter the access code provided to you to view the photo gallery.
+            Thank you for using our service. Please enter the access code
+            provided to you to view the photo gallery.
           </p>
         </div>
 
@@ -104,8 +105,6 @@ async function verifyAccessCode() {
       </form>
     </UCard>
 
-    
-    
     <ColorModePicker />
   </main>
 </template>
