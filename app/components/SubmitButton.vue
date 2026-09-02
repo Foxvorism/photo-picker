@@ -1,10 +1,16 @@
 <script lang="ts" setup>
 type Props = {
+  disabled?: boolean;
+  loading?: boolean;
   selectedCount: number;
   selectLimit: number;
 };
 
-const props = defineProps<Props>();
+defineProps<Props>();
+
+const emit = defineEmits<{
+  submit: [];
+}>();
 </script>
 
 <template>
@@ -21,10 +27,13 @@ const props = defineProps<Props>();
             Done picking your photo?
           </span>
           <UButton
-            class="rounded-full px-4 py-1 text-xs md:text-sm bg-[#d0dbee] text-[#083182] font-bold shadow-md shadow-[#083182]/25 transition hover:bg-[#d0dbee] focus-visible:ring-[#083182]/40! dark:bg-[#083182]! dark:text-[#d0dbee]! dark:hover:bg-[#eaf0fb]! dark:active:bg-[#eaf0fb]! dark:focus-visible:ring-[#d0dbee]/50!"
-            color="primary"
+            class="rounded-full bg-[#d0dbee]! px-4 py-1 text-xs font-bold text-[#083182]! shadow-md shadow-[#083182]/25 transition hover:bg-[#c1c9e0]! active:bg-[#c1c9e0]! focus-visible:ring-[#083182]/40! dark:bg-[#083182]! dark:text-[#d0dbee]! dark:hover:bg-[#062764]! dark:active:bg-[#062764]! dark:focus-visible:ring-[#d0dbee]/50! md:text-sm"
+            color="neutral"
+            :disabled="disabled"
+            :loading="loading"
+            type="button"
             variant="solid"
-            @click="$router.push('/')"
+            @click="emit('submit')"
           >
             Submit
           </UButton>
