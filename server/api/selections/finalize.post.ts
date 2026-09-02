@@ -111,6 +111,13 @@ export default defineEventHandler(async (event) => {
     });
   }
 
+  if (project.status !== "open") {
+    throw createError({
+      statusCode: 409,
+      statusMessage: "Project belum dibuka untuk pemilihan foto.",
+    });
+  }
+
   if (photoIds.length > project.selection_limit) {
     throw createError({
       statusCode: 400,
