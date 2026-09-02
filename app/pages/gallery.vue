@@ -424,6 +424,7 @@ onBeforeUnmount(() => {
       v-model="showSelectedOnly"
       :disabled="selectedPhotoCount === 0 && !showSelectedOnly"
     />
+    <LogoutButton />
     <ColorModePicker />
     <SubmitButton
       v-if="selectedPhotoCount > 0 && !isSubmitted"
