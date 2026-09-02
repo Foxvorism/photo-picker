@@ -12,8 +12,6 @@ type GalleryResponse = {
   project: {
     title: string;
     clientName: string;
-    notificationError: string | null;
-    notificationStatus: string | null;
     selectionLimit: number;
     status: string;
   };

@@ -7,8 +7,6 @@ type ProjectRow = {
   id: string;
   title: string;
   client_name: string;
-  notification_error: string | null;
-  notification_status: string | null;
   selection_limit: number;
   status: string;
 };
@@ -35,9 +33,7 @@ export default defineEventHandler(async (event) => {
 
   const { data: project, error: projectError } = await supabase
     .from("projects")
-    .select(
-      "id,title,client_name,selection_limit,status,notification_status,notification_error",
-    )
+    .select("id,title,client_name,selection_limit,status")
     .eq("id", projectId)
     .single<ProjectRow>();
 
@@ -90,8 +86,6 @@ export default defineEventHandler(async (event) => {
     project: {
       title: project.title,
       clientName: project.client_name,
-      notificationError: project.notification_error,
-      notificationStatus: project.notification_status,
       selectionLimit: project.selection_limit,
       status: project.status,
     },
