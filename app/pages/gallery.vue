@@ -12,6 +12,8 @@ type GalleryResponse = {
   project: {
     title: string;
     clientName: string;
+    notificationError: string | null;
+    notificationStatus: string | null;
     selectionLimit: number;
     status: string;
   };
@@ -20,6 +22,7 @@ type GalleryResponse = {
 };
 
 const toast = useToast();
+const isFinalizing = ref(false);
 
 const {
   data: gallery,
@@ -44,6 +47,7 @@ const isSubmitted = computed(
 
 const selectedPhotoIds = ref<Set<string>>(new Set());
 const showSelectedOnly = ref(false);
+const previewPhoto = ref<GalleryPhoto | null>(null);
 
 watch(
   gallery,
@@ -64,7 +68,7 @@ const selectedPhotoCount = computed(() => {
 const filteredPhotos = computed(() => {
   const photos = gallery.value?.photos ?? [];
 
-  if (!showSelectedOnly.value) {
+  if (!isSubmitted.value && !showSelectedOnly.value) {
     return photos;
   }
 
@@ -103,6 +107,81 @@ function togglePhotoSelection(photo: GalleryPhoto) {
 
   if (showSelectedOnly.value) {
     nextTick(resizeAllMasonryItems);
+  }
+}
+
+function openPhotoPreview(photo: GalleryPhoto) {
+  previewPhoto.value = photo;
+}
+
+function closePhotoPreview() {
+  previewPhoto.value = null;
+}
+
+function updatePhotoPreviewOpen(open: boolean) {
+  if (!open) {
+    closePhotoPreview();
+  }
+}
+
+function handlePhotoPreviewKeydown(event: KeyboardEvent, photo: GalleryPhoto) {
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    openPhotoPreview(photo);
+  }
+}
+
+async function submitSelection() {
+  if (isFinalizing.value || isSubmitted.value) {
+    return;
+  }
+
+  isFinalizing.value = true;
+
+  try {
+    const response = await $fetch<{
+      notification: {
+        error?: string;
+        status: "sent" | "failed";
+      };
+      selectedCount: number;
+      submitted: boolean;
+    }>("/api/selections/finalize", {
+      method: "POST",
+      body: {
+        photoIds: [...selectedPhotoIds.value],
+      },
+    });
+
+    if (response.notification.status === "sent") {
+      toast.add({
+        color: "success",
+        description: `Daftar ${response.selectedCount} foto sudah dikirim ke fotografer.`,
+        title: "Pilihan berhasil disubmit",
+      });
+    } else {
+      toast.add({
+        color: "warning",
+        description:
+          response.notification.error ??
+          "Pilihan tersimpan, tapi WhatsApp belum terkirim.",
+        title: "Pilihan tersimpan",
+      });
+    }
+
+    await $fetch("/api/access/logout", {
+      method: "POST",
+    });
+    await navigateTo("/");
+  } catch (error) {
+    toast.add({
+      color: "error",
+      description:
+        error instanceof Error ? error.message : "Submit gagal diproses.",
+      title: "Submit gagal",
+    });
+  } finally {
+    isFinalizing.value = false;
   }
 }
 
@@ -214,14 +293,6 @@ onBeforeUnmount(() => {
         :selection-limit="gallery?.project.selectionLimit ?? 0"
       />
 
-      <UAlert
-        v-if="isSubmitted"
-        color="success"
-        description="Pilihan foto untuk project ini sudah difinalisasi."
-        title="Project sudah dikirim"
-        variant="soft"
-      />
-
       <section
         v-if="pending"
         class="grid grid-cols-2 gap-x-2.5 gap-y-1.5 sm:grid-cols-3 lg:grid-cols-4"
@@ -287,8 +358,10 @@ onBeforeUnmount(() => {
             style="grid-row-end: span 32"
           >
             <div
-              class="group relative overflow-hidden rounded-lg border-2 border-[#083182]/95 bg-gray-100 shadow-sm dark:border-[#d0dbee] dark:bg-[#083182]/20"
+              class="group relative cursor-zoom-in overflow-hidden rounded-lg border-2 border-[#083182]/95 bg-gray-100 shadow-sm dark:border-[#d0dbee] dark:bg-[#083182]/20"
               tabindex="0"
+              @click="openPhotoPreview(photo)"
+              @keydown="handlePhotoPreviewKeydown($event, photo)"
             >
               <img
                 :alt="photo.filename"
@@ -309,6 +382,7 @@ onBeforeUnmount(() => {
               </p>
 
               <UButton
+                v-if="!isSubmitted"
                 :aria-label="
                   isPhotoSelected(photo.id)
                     ? 'Foto sudah dipilih'
@@ -317,7 +391,7 @@ onBeforeUnmount(() => {
                 :aria-pressed="isPhotoSelected(photo.id)"
                 :class="
                   isPhotoSelected(photo.id)
-                    ? 'bg-[#083182] text-white dark:bg-[#d0dbee] dark:text-[#083182]'
+                    ? 'bg-[#083182] text-white'
                     : 'bg-white/15 text-gray-50'
                 "
                 class="absolute right-2 top-2 rounded-full shadow-sm ring-1 ring-white/60 backdrop-blur transition hover:bg-white/80 hover:text-gray-950"
@@ -348,14 +422,28 @@ onBeforeUnmount(() => {
     </div>
 
     <FilterSelectedButton
+      v-if="!isSubmitted"
       v-model="showSelectedOnly"
       :disabled="selectedPhotoCount === 0 && !showSelectedOnly"
     />
     <ColorModePicker />
     <SubmitButton
-      v-if="selectedPhotoCount > 0"
-      :selectedCount="selectedPhotoCount"
-      :selectLimit="gallery?.project.selectionLimit || 0"
+      v-if="selectedPhotoCount > 0 && !isSubmitted"
+      :disabled="isSubmitted"
+      :loading="isFinalizing"
+      :selected-count="selectedPhotoCount"
+      :select-limit="gallery?.project.selectionLimit || 0"
+      @submit="submitSelection"
+    />
+
+    <PhotoPreviewModal
+      :open="Boolean(previewPhoto)"
+      :photo="previewPhoto"
+      :readonly="isSubmitted"
+      :selected="previewPhoto ? isPhotoSelected(previewPhoto.id) : false"
+      @close="closePhotoPreview"
+      @toggle="togglePhotoSelection"
+      @update:open="updatePhotoPreviewOpen"
     />
   </main>
 </template>
