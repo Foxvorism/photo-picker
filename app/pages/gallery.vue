@@ -392,7 +392,7 @@ onBeforeUnmount(() => {
                     ? 'bg-[#083182] text-white'
                     : 'bg-white/15 text-gray-50'
                 "
-                class="absolute right-2 top-2 rounded-full shadow-sm ring-1 ring-white/60 backdrop-blur transition hover:bg-white/80 hover:text-gray-950"
+                class="absolute cursor-pointer right-2 top-2 rounded-full shadow-sm ring-1 ring-white/60 backdrop-blur transition hover:bg-white/80 hover:text-gray-950"
                 :color="isPhotoSelected(photo.id) ? 'primary' : 'neutral'"
                 :disabled="isSubmitted"
                 icon="i-lucide-check"
