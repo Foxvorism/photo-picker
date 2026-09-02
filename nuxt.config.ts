@@ -13,7 +13,7 @@ export default defineNuxtConfig({
     supabaseUrl: "",
     supabaseSecretKey: "",
     sessionSecret: "",
-    supabaseBucket: "photo-previews",
+    supabaseBucket: "",
     fonnteToken: "",
     fonnteCountryCode: "62",
   },
