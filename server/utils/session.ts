@@ -1,6 +1,12 @@
 import type { H3Event } from "h3";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { createError, getCookie, setCookie, useRuntimeConfig } from "#imports";
+import {
+  createError,
+  deleteCookie,
+  getCookie,
+  setCookie,
+  useRuntimeConfig,
+} from "#imports";
 
 const sessionCookieName = "photo_picker_session";
 const sessionMaxAgeSeconds = 60 * 60 * 24;
@@ -58,6 +64,14 @@ export function setProjectSession(event: H3Event, projectId: string) {
   setCookie(event, sessionCookieName, `${payload}.${signature}`, {
     httpOnly: true,
     maxAge: sessionMaxAgeSeconds,
+    path: "/",
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+}
+
+export function clearProjectSession(event: H3Event) {
+  deleteCookie(event, sessionCookieName, {
     path: "/",
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
