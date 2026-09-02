@@ -1,11 +1,14 @@
-import { createError, defineEventHandler, useRuntimeConfig } from "#imports";
+import { createError, defineEventHandler } from "#imports";
 import { getProjectSession } from "../utils/session";
 import { createSupabaseAdmin } from "../utils/supabase";
+import { rememberPhotoPreviewPath } from "../utils/photo-preview-cache";
 
 type ProjectRow = {
   id: string;
   title: string;
   client_name: string;
+  notification_error: string | null;
+  notification_status: string | null;
   selection_limit: number;
   status: string;
 };
@@ -21,14 +24,20 @@ type SelectionRow = {
   photo_id: string;
 };
 
+const filenameSorter = new Intl.Collator("en", {
+  numeric: true,
+  sensitivity: "base",
+});
+
 export default defineEventHandler(async (event) => {
   const { projectId } = getProjectSession(event);
-  const config = useRuntimeConfig(event);
   const supabase = createSupabaseAdmin(event);
 
   const { data: project, error: projectError } = await supabase
     .from("projects")
-    .select("id,title,client_name,selection_limit,status")
+    .select(
+      "id,title,client_name,selection_limit,status,notification_status,notification_error",
+    )
     .eq("id", projectId)
     .single<ProjectRow>();
 
@@ -44,8 +53,7 @@ export default defineEventHandler(async (event) => {
     .select("id,filename,preview_path,sort_order")
     .eq("project_id", projectId)
     .eq("is_visible", true)
-    .order("sort_order", { ascending: true })
-    .order("filename", { ascending: true })
+    .order("filename", { ascending: false })
     .returns<PhotoRow[]>();
 
   if (photosError) {
@@ -68,30 +76,29 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  const signedUrls = await supabase.storage
-    .from(config.supabaseBucket)
-    .createSignedUrls(photos.map((photo) => photo.preview_path), 60 * 5);
-
-  if (signedUrls.error) {
-    throw createError({
-      statusCode: 500,
-      statusMessage: "Photo previews could not be loaded",
-    });
-  }
+  photos.sort((firstPhoto, secondPhoto) =>
+    filenameSorter.compare(firstPhoto.filename, secondPhoto.filename),
+  );
 
   const selectedPhotoIds = new Set(selections.map((selection) => selection.photo_id));
+
+  for (const photo of photos) {
+    rememberPhotoPreviewPath(projectId, photo.id, photo.preview_path);
+  }
 
   return {
     project: {
       title: project.title,
       clientName: project.client_name,
+      notificationError: project.notification_error,
+      notificationStatus: project.notification_status,
       selectionLimit: project.selection_limit,
       status: project.status,
     },
-    photos: photos.map((photo, index) => ({
+    photos: photos.map((photo) => ({
       id: photo.id,
       filename: photo.filename,
-      previewUrl: signedUrls.data[index]?.signedUrl ?? "",
+      previewUrl: `/api/photo-previews/${encodeURIComponent(photo.id)}`,
       selected: selectedPhotoIds.has(photo.id),
     })),
     selectedCount: selectedPhotoIds.size,

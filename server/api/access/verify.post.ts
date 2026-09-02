@@ -4,6 +4,34 @@ import { assertRateLimit } from "../../utils/rate-limit";
 import { setProjectSession } from "../../utils/session";
 import { createSupabaseAdmin } from "../../utils/supabase";
 
+type SupabaseRpcError = {
+  code?: string;
+  message?: string;
+};
+
+async function verifyGalleryAccess(
+  supabase: ReturnType<typeof createSupabaseAdmin>,
+  code: string,
+) {
+  const galleryAccessResult = await supabase.rpc("verify_project_gallery_access", {
+    input_code: code,
+  });
+
+  if (!galleryAccessResult.error) {
+    return galleryAccessResult;
+  }
+
+  const error = galleryAccessResult.error as SupabaseRpcError;
+
+  if (error.code !== "PGRST202") {
+    return galleryAccessResult;
+  }
+
+  return supabase.rpc("verify_project_access", {
+    input_code: code,
+  });
+}
+
 export default defineEventHandler(async (event) => {
   assertRateLimit(event, "access-verify");
 
@@ -24,9 +52,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const supabase = createSupabaseAdmin(event);
-  const { data: projectId, error } = await supabase.rpc("verify_project_access", {
-    input_code: code,
-  });
+  const { data: projectId, error } = await verifyGalleryAccess(supabase, code);
 
   if (error) {
     throw createError({
