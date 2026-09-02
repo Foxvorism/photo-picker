@@ -8,7 +8,8 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "import:drive": "tsx scripts/import-drive-folder.ts"
+    "import:drive": "tsx scripts/import-drive-folder.ts",
+    "import:worker": "tsx scripts/import-worker.ts"
   },
   "dependencies": {
     "@nuxt/ui": "^4.10.0",

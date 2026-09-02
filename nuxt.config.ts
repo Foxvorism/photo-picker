@@ -10,10 +10,11 @@ export default defineNuxtConfig({
   css: ["~/assets/css/main.css"],
 
   runtimeConfig: {
+    adminSecretKey: "",
     supabaseUrl: "",
     supabaseSecretKey: "",
     sessionSecret: "",
-    supabaseBucket: "photo-previews",
+    supabaseBucket: "",
     fonnteToken: "",
     fonnteCountryCode: "62",
   },
