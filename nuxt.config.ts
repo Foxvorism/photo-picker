@@ -5,7 +5,7 @@ export default defineNuxtConfig({
     enabled: true,
   },
 
-  modules: ["@nuxt/ui", "@vercel/analytics"],
+  modules: ["@nuxt/ui"],
 
   css: ["~/assets/css/main.css"],
 
