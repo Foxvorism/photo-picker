@@ -1,2 +1,10 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
+
+[data-slot="base"] [role="progressbar"] [data-slot="indicator"] {
+  background-color: #083182 !important;
+}
+
+.dark [data-slot="base"] [role="progressbar"] [data-slot="indicator"] {
+  background-color: #d0dbee !important;
+}
