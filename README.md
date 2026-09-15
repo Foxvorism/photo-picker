@@ -133,6 +133,33 @@ http://localhost:3000/admin/import
 
 If a project is already `submitted`, the access code can still open the gallery in read-only mode if `verify_project_gallery_access` is available. Read-only mode only displays the selected photos.
 
+## Admin Create Project
+
+Open `/admin/create-project`, select **Sutoori Production** or **Sinemayu**, then verify the vendor password. The project form opens after successful verification. Vendor passwords use private runtime config:
+
+```env
+NUXT_SUTOORI_SECRET_KEY=replace-with-sutoori-password
+NUXT_SINEMAYU_SECRET_KEY=replace-with-sinemayu-password
+```
+
+`NUXT_SESSION_SECRET` must contain at least 32 characters. Vendor verification uses a separate HttpOnly cookie valid for 30 minutes. The create endpoint checks this session and binds the project to its verified vendor. The existing import page still uses `NUXT_ADMIN_SECRET_KEY`.
+
+Before creating projects, review and run `supabase/create-vendor-project.sql` in Supabase SQL Editor, including when upgrading from the previous manual-code version. It replaces the old two-argument RPC with a service-role-only `create_vendor_project(input_project jsonb)` RPC. No tables or existing project data are changed. It requires `pgcrypto` in `extensions` and a `vendor` column accepting the exact vendor names above.
+
+Access codes are generated inside PostgreSQL, following the existing project creation query: two independent `gen_random_bytes(4)` values become 8-character uppercase hexadecimal strings, joined as `PREFIX-SECRET`. The full code is hashed with `extensions.crypt` and bcrypt cost 10. The new code is returned after insertion for the admin to save; the hash is never returned.
+
+Every new project starts as `draft`, with `selection_deadline = now() + interval '7 days'` using the database clock. The form only asks for the title, client/photographer names and phones, Drive folder, and selection limit. Browser-supplied codes, status, and deadlines are ignored. Creating a project does not import photos automatically; continue to `/admin/import` using the generated access code.
+
+Checks:
+
+```bash
+node --import tsx --test tests/project-input.test.ts
+npm run build
+node --test tests/admin-project.test.mjs
+```
+
+The API test runs the production build with dummy secrets and a local mock Supabase endpoint; it does not write to a real database. Run the SQL against your database only after reviewing it, then verify one test project end to end with your deployed database functions.
+
 ## Photo Import
 
 There are two ways to import photos.
