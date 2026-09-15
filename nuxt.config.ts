@@ -11,6 +11,8 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     adminSecretKey: "",
+    sutooriSecretKey: "",
+    sinemayuSecretKey: "",
     supabaseUrl: "",
     supabaseSecretKey: "",
     sessionSecret: "",
