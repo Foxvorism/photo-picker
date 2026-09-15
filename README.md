@@ -49,7 +49,7 @@ Environment notes:
 
 - `NUXT_SUPABASE_SECRET_KEY` must be the Supabase service role key, not the anon key.
 - `NUXT_SESSION_SECRET` should be a long random string.
-- `NUXT_ADMIN_SECRET_KEY` is used to protect the `/admin/import` page.
+- `/admin/import` uses the owning vendor's `NUXT_SUTOORI_SECRET_KEY` or `NUXT_SINEMAYU_SECRET_KEY` password.
 - `NUXT_FONNTE_TOKEN` is used by the server to send WhatsApp messages.
 - `GOOGLE_APPLICATION_CREDENTIALS` is only required when running the local import CLI/worker.
 
@@ -142,7 +142,7 @@ NUXT_SUTOORI_SECRET_KEY=replace-with-sutoori-password
 NUXT_SINEMAYU_SECRET_KEY=replace-with-sinemayu-password
 ```
 
-`NUXT_SESSION_SECRET` must contain at least 32 characters. Vendor verification uses a separate HttpOnly cookie valid for 30 minutes. The create endpoint checks this session and binds the project to its verified vendor. The existing import page still uses `NUXT_ADMIN_SECRET_KEY`.
+`NUXT_SESSION_SECRET` must contain at least 32 characters. Vendor verification uses a separate HttpOnly cookie valid for 30 minutes. The create endpoint checks this session and binds the project to its verified vendor. The import page independently verifies the password for the vendor that owns the access code.
 
 Before creating projects, review and run `supabase/create-vendor-project.sql` in Supabase SQL Editor, including when upgrading from the previous manual-code version. It replaces the old two-argument RPC with a service-role-only `create_vendor_project(input_project jsonb)` RPC. No tables or existing project data are changed. It requires `pgcrypto` in `extensions` and a `vendor` column accepting the exact vendor names above.
 
@@ -176,12 +176,16 @@ This directly reads the Drive folder, creates `.webp` previews, uploads them to 
 
 ### Admin Page + Worker
 
+Run `supabase/create-vendor-import-job.sql` once before using the updated import page. It adds a service-role-only RPC that locks the project, rechecks its vendor/status, reuses an existing pending/processing job or creates one, and changes `draft` to `open` in one transaction. If the transaction fails, neither the new job nor the status change is committed. Existing open projects remain open. Vendor/password mismatches are rejected before this RPC; the generic admin password is no longer accepted.
+
+Projects become open when the job is queued, so the gallery may initially be empty until the worker imports the photos. The selection deadline stays unchanged.
+
 The admin page only creates a job so the heavy processing does not run inside a Vercel Function.
 
 1. Start the website.
 2. Open `/admin/import`.
-3. Enter the admin secret and the project access code.
-4. Submit the form to create an `import_jobs` row with `pending` status.
+3. Enter the project access code and the password of its owning vendor.
+4. Submit the form to create an `import_jobs` row with `pending` status and change the project from `draft` to `open` atomically.
 5. Run the worker from the admin laptop or a separate worker server:
 
 ```bash
