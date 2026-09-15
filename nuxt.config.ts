@@ -5,6 +5,12 @@ export default defineNuxtConfig({
     enabled: true,
   },
 
+  app: {
+    head: {
+      link: [{ rel: "icon", type: "image/x-icon", href: "/favicon-sut.ico?v=2" }],
+    },
+  },
+
   modules: ["@nuxt/ui"],
 
   css: ["~/assets/css/main.css"],
