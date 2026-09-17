@@ -1,10 +1,15 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
-[data-slot="base"] [role="progressbar"] [data-slot="indicator"] {
-  background-color: #083182 !important;
+:root {
+  --ui-primary: #083182;
 }
 
-.dark [data-slot="base"] [role="progressbar"] [data-slot="indicator"] {
-  background-color: #d0dbee !important;
+.dark {
+  --ui-primary: #d0dbee;
+}
+
+/* Keep toast timers on brand, but preserve Nuxt UI's red error indicator. */
+[data-slot="progress"] [data-slot="indicator"]:not(.bg-error) {
+  background-color: var(--ui-primary) !important;
 }
